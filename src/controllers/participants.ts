@@ -72,17 +72,25 @@ const ParticipantController = {
         });
     } else {
       res.status(400).send({
-        error: "Un ID est nécessaire pour mettre à jour un participant",
+        error: "Identifiant du participant manquant",
       });
     }
   },
 
   delete(req: Request, res: Response): void {
-    const id = req.params.id;
+    const { id } = req.params;
     if (id) {
       ParticipantModel.findByIdAndDelete(id)
-        .then(() => {
-          res.send({ result: `Suppression du participant n°${id}` });
+        .then((participant) => {
+          if (participant) {
+            res.send({
+              result: `Suppression du participant ${participant.name} OK`,
+            });
+          } else {
+            res
+              .status(404)
+              .send({ error: "Participant non trouvé pour suppression" });
+          }
         })
         .catch((err) => {
           res
@@ -91,7 +99,7 @@ const ParticipantController = {
         });
     } else {
       res.status(400).send({
-        error: "Un ID est nécessaire pour la suppression du participant",
+        error: "Identifiant du participant manquant",
       });
     }
   },
