@@ -4,6 +4,7 @@ import ListModel from "../models/list";
 const ListController = {
   getAll(req: Request, res: Response): void {
     ListModel.find()
+      .populate("participants")
       .then((lists) => {
         res.send(lists);
       })

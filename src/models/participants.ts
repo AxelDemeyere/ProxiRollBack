@@ -6,5 +6,4 @@ const ParticipantSchema = new Schema({
 });
 
 const ParticipantModel = mongoose.model("participant", ParticipantSchema);
-
 export default ParticipantModel;

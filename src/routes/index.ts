@@ -16,7 +16,7 @@ const Routes = (server: Express) => {
     ParticipantController.create(req, res);
   });
 
-  server.put("/participants/:id", (req: Request, res: Response) => {
+  server.patch("/participants/:id", (req: Request, res: Response) => {
     ParticipantController.update(req, res);
   });
 

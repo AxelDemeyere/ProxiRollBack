@@ -4,6 +4,7 @@ import ParticipantModel from "../models/participants";
 const ParticipantController = {
   getAll(req: Request, res: Response): void {
     ParticipantModel.find()
+      .populate("list")
       .then((participants) => {
         res.send(participants);
       })
@@ -39,9 +40,16 @@ const ParticipantController = {
     });
 
     participant
-      .save()
-      .then(() => {
-        res.send({ result: `Création du participant ${participant.name} OK` });
+      .save() // Sauvegarde du participant
+      .then((newParticipant) => {
+        if (!newParticipant) {
+          return res
+            .status(500)
+            .send({ error: "Échec de la création du participant" });
+        }
+        res.send({
+          result: `Création du participant ${newParticipant.name} OK`,
+        });
       })
       .catch((err) => {
         res
@@ -52,29 +60,31 @@ const ParticipantController = {
 
   update(req: Request, res: Response): void {
     const id = req.params.id;
-    if (id) {
-      ParticipantModel.findByIdAndUpdate(id, req.body, { new: true })
-        .then((participant) => {
-          if (participant) {
-            res.send({
-              result: `Mise à jour du participant ${participant.name}`,
-            });
-          } else {
-            res
-              .status(404)
-              .send({ error: "Participant non trouvé pour mise à jour" });
-          }
-        })
-        .catch((err) => {
-          res
-            .status(500)
-            .send({ error: "Erreur lors de la mise à jour", details: err });
-        });
-    } else {
-      res.status(400).send({
-        error: "Identifiant du participant manquant",
-      });
+    const { name } = req.body;
+
+    if (!name || typeof name !== "string") {
+      res
+        .status(400)
+        .send({ error: "Nom du participant manquant ou invalide" });
     }
+
+    ParticipantModel.findByIdAndUpdate(id, { name }, { new: true })
+      .then((participant) => {
+        if (participant) {
+          res.send({
+            result: `Mise à jour du participant ${participant.name}`,
+          });
+        } else {
+          res
+            .status(404)
+            .send({ error: "Participant non trouvé pour mise à jour" });
+        }
+      })
+      .catch((err) => {
+        res
+          .status(500)
+          .send({ error: "Erreur lors de la mise à jour", details: err });
+      });
   },
 
   delete(req: Request, res: Response): void {
