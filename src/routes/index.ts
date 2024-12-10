@@ -40,6 +40,11 @@ const Routes = (server: Express) => {
   server.delete("/listes/:id", (req: Request, res: Response) => {
     ListController.delete(req, res);
   });
+
+  // Nouvelle route pour ajouter un participant à une liste
+  server.patch("/listes/:id/participants", (req: Request, res: Response) => {
+    ListController.addParticipant(req, res);
+  });
 };
 
 export default Routes;

@@ -35,26 +35,59 @@ const ParticipantController = {
   },
 
   create(req: Request, res: Response): void {
+    console.log('[CONTROLLER] Creating participant - Full request body:', JSON.stringify(req.body, null, 2));
+    console.log('[CONTROLLER] Request headers:', JSON.stringify(req.headers, null, 2));
+
+    // Validation du nom
+    if (!req.body.name || typeof req.body.name !== 'string') {
+      console.error('[CONTROLLER] Invalid participant name:', req.body.name);
+      res.status(400).send({ 
+        error: "Nom du participant invalide", 
+        details: { name: req.body.name } 
+      });
+    }
+
     const participant = new ParticipantModel({
       name: req.body.name,
     });
 
+    console.log('[CONTROLLER] Participant model before save:', JSON.stringify(participant, null, 2));
+
     participant
       .save() // Sauvegarde du participant
       .then((newParticipant) => {
+        console.log('[CONTROLLER] Participant saved - Full response:', JSON.stringify(newParticipant, null, 2));
+
         if (!newParticipant) {
+          console.error('[CONTROLLER] Participant creation failed - no participant returned');
           return res
             .status(500)
             .send({ error: "Échec de la création du participant" });
         }
-        res.send({
-          result: `Création du participant ${newParticipant.name} OK`,
-        });
+        
+        // Vérification explicite de l'_id
+        if (!newParticipant._id) {
+          console.error('[CONTROLLER] Participant created without _id:', JSON.stringify(newParticipant, null, 2));
+          return res
+            .status(500)
+            .send({ error: "Participant créé sans _id" });
+        }
+
+        res.status(201).send(newParticipant); // Renvoie le participant créé
       })
       .catch((err) => {
+        console.error('[CONTROLLER] Error creating participant - Full error:', JSON.stringify(err, null, 2));
         res
           .status(500)
-          .send({ error: "Erreur lors de la création", details: err });
+          .send({ 
+            error: "Erreur lors de la création", 
+            details: {
+              message: err.message,
+              name: err.name,
+              code: err.code,
+              stack: err.stack
+            } 
+          });
       });
   },
 
