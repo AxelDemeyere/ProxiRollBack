@@ -3,6 +3,9 @@ import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
 import Routes from "./routes/index";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 
@@ -11,16 +14,18 @@ app.use(bodyParser.json());
 
 Routes(app);
 
+const MONGODB_URI = process.env.MONGODB_URI;
+const PORT = process.env.PORT || 3000;
+
 // Connexion à MongoDB avant de démarrer le serveur
 mongoose
-  .connect("mongodb://127.0.0.1:27017/ProxiRoll")
+  .connect(`mongodb://${MONGODB_URI}`)
   .then(() => {
     console.log("Connexion à MongoDB OK");
 
     // Démarrage du serveur Express une fois que la connexion à MongoDB est réussie
-    const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+      console.log(`Server is running on port ${PORT}!`);
     });
   })
 

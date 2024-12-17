@@ -4,6 +4,10 @@ import ParticipantController from "../controllers/participants";
 
 const Routes = (server: Express) => {
   //Participants
+  server.get("/participants/available", (req: Request, res: Response) => {
+    ParticipantController.getAvailable(req, res);
+  });
+
   server.get("/participants", (req: Request, res: Response) => {
     ParticipantController.getAll(req, res);
   });
@@ -28,22 +32,30 @@ const Routes = (server: Express) => {
   server.get("/listes", (req: Request, res: Response) => {
     ListController.getAll(req, res);
   });
+
   server.get("/listes/:id", (req: Request, res: Response) => {
     ListController.get(req, res);
   });
+
   server.post("/listes", (req: Request, res: Response) => {
     ListController.create(req, res);
   });
-  server.put("/listes/:id", (req: Request, res: Response) => {
+
+  server.patch("/listes/:id", (req: Request, res: Response) => {
     ListController.update(req, res);
   });
+
   server.delete("/listes/:id", (req: Request, res: Response) => {
     ListController.delete(req, res);
   });
 
-  // Nouvelle route pour ajouter un participant à une liste
+  // Routes pour la gestion des participants dans les listes
   server.patch("/listes/:id/participants", (req: Request, res: Response) => {
     ListController.addParticipant(req, res);
+  });
+
+  server.delete("/listes/:id/participants/:participantId", (req: Request, res: Response) => {
+    ListController.removeParticipant(req, res);
   });
 };
 
