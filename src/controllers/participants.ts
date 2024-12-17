@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import ParticipantModel from "../models/participants";
+import ListModel from "../models/list";
+import mongoose from "mongoose";
 
 const ParticipantController = {
   getAll(req: Request, res: Response): void {
@@ -143,6 +145,34 @@ const ParticipantController = {
     } else {
       res.status(400).send({
         error: "Identifiant du participant manquant",
+      });
+    }
+  },
+
+  async getAvailable(req: Request, res: Response): Promise<void> {
+    try {
+      // Récupérer tous les participants
+      const allParticipants = await ParticipantModel.find();
+      
+      // Récupérer toutes les listes avec leurs participants
+      const allLists = await ListModel.find();
+      
+      // Créer un Set de tous les IDs de participants qui sont dans des listes
+      const assignedParticipantIds = new Set(
+        allLists.flatMap(list => list.participants.map(id => id.toString()))
+      );
+      
+      // Filtrer les participants qui ne sont pas dans des listes
+      const availableParticipants = allParticipants.filter(
+        participant => !assignedParticipantIds.has(participant._id.toString())
+      );
+      
+      res.status(200).json(availableParticipants);
+    } catch (err) {
+      console.error("[CONTROLLER] Error getting available participants:", err);
+      res.status(500).json({
+        error: "Erreur lors de la récupération des participants disponibles",
+        details: err instanceof Error ? err.message : err,
       });
     }
   },

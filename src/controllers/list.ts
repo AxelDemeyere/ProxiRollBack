@@ -66,54 +66,109 @@ const ListController = {
   },
 
   async update(req: Request, res: Response): Promise<void> {
-    const { id } = req.params;
-    const { name, participants } = req.body;
-
     try {
-      console.log(`[LIST CONTROLLER] Updating list with ID: ${id}`);
-      const updatedList = await ListModel.findByIdAndUpdate(
-        id,
-        { name, participants },
-        { new: true, runValidators: true }
-      ).populate("participants");
+      const { id } = req.params;
+      const updates = req.body;
 
-      if (!updatedList) {
-        console.log(`[LIST CONTROLLER] List not found: ${id}`);
-        res.status(404).json({ error: "Liste non trouvée" });
+      console.log('[LIST CONTROLLER] Updating list:', { id, updates });
+
+      if (!id) {
+        res.status(400).json({ 
+          error: "ID de liste requis",
+          details: { id }
+        });
         return;
       }
 
-      console.log('[LIST CONTROLLER] List updated:', updatedList);
-      res.status(200).json({ message: `Mise à jour réussie`, updatedList });
-    } catch (err) {
-      console.error(`[LIST CONTROLLER] Error updating list ${id}:`, err);
-      res.status(500).json({
-        error: "Erreur lors de la mise à jour de la liste",
-        details: err instanceof Error ? err.message : err,
+      // Conversion de l'ID en ObjectId
+      let listObjectId: mongoose.Types.ObjectId;
+      try {
+        listObjectId = new mongoose.Types.ObjectId(id);
+      } catch (idError) {
+        res.status(400).json({ 
+          error: "Format d'ID invalide",
+          details: idError instanceof Error ? idError.message : String(idError)
+        });
+        return;
+      }
+
+      // Vérification de l'existence de la liste
+      const list = await ListModel.findById(listObjectId);
+      if (!list) {
+        res.status(404).json({ 
+          error: "Liste non trouvée",
+          details: { id }
+        });
+        return;
+      }
+
+      // Mise à jour de la liste
+      list.name = updates.name || list.name;
+      const updatedList = await list.save();
+
+      // Récupération de la liste avec les détails des participants
+      const populatedList = await ListModel.findById(listObjectId).populate("participants");
+
+      res.status(200).json(populatedList);
+    } catch (error) {
+      console.error("[LIST CONTROLLER] Erreur lors de la mise à jour de la liste:", error);
+      
+      res.status(500).json({ 
+        error: "Erreur interne lors de la mise à jour de la liste",
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   },
 
   async delete(req: Request, res: Response): Promise<void> {
-    const { id } = req.params;
     try {
-      console.log(`[LIST CONTROLLER] Deleting list with ID: ${id}`);
-      const deletedList = await ListModel.findByIdAndDelete(id);
-      if (!deletedList) {
-        console.log(`[LIST CONTROLLER] List not found: ${id}`);
-        res.status(404).json({ error: "Liste non trouvée" });
+      const { id } = req.params;
+
+      console.log('[LIST CONTROLLER] Deleting list:', id);
+
+      if (!id) {
+        res.status(400).json({ 
+          error: "ID de liste requis",
+          details: { id }
+        });
         return;
       }
 
-      console.log('[LIST CONTROLLER] List deleted:', deletedList);
+      // Conversion de l'ID en ObjectId
+      let listObjectId: mongoose.Types.ObjectId;
+      try {
+        listObjectId = new mongoose.Types.ObjectId(id);
+      } catch (idError) {
+        res.status(400).json({ 
+          error: "Format d'ID invalide",
+          details: idError instanceof Error ? idError.message : String(idError)
+        });
+        return;
+      }
+
+      // Vérification de l'existence de la liste
+      const list = await ListModel.findById(listObjectId);
+      if (!list) {
+        res.status(404).json({ 
+          error: "Liste non trouvée",
+          details: { id }
+        });
+        return;
+      }
+
+      // Suppression de la liste
+      await ListModel.findByIdAndDelete(listObjectId);
+
       res.status(200).json({
-        message: `Suppression de la liste ${deletedList.name} réussie`,
+        message: "Liste supprimée avec succès",
+        listId: id
       });
-    } catch (err) {
-      console.error(`[LIST CONTROLLER] Error deleting list ${id}:`, err);
-      res.status(500).json({
-        error: "Erreur lors de la suppression de la liste",
-        details: err instanceof Error ? err.message : err,
+    } catch (error) {
+      console.error("[LIST CONTROLLER] Erreur lors de la suppression de la liste:", error);
+      
+      res.status(500).json({ 
+        error: "Erreur interne lors de la suppression de la liste",
+        details: error instanceof Error ? error.message : String(error)
       });
     }
   },
@@ -209,6 +264,87 @@ const ListController = {
       });
     }
   },
+
+  async removeParticipant(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, participantId } = req.params;
+
+      // Validation des paramètres d'entrée
+      if (!id || !participantId) {
+        res.status(400).json({ 
+          error: "ID de liste et ID de participant sont requis",
+          details: {
+            listId: id,
+            participantId: participantId
+          }
+        });
+        return;
+      }
+
+      // Conversion des ID en ObjectId avec gestion des erreurs
+      let listObjectId: mongoose.Types.ObjectId;
+      let participantObjectId: mongoose.Types.ObjectId;
+
+      try {
+        listObjectId = new mongoose.Types.ObjectId(id);
+        participantObjectId = new mongoose.Types.ObjectId(participantId);
+      } catch (idError) {
+        res.status(400).json({ 
+          error: "Format d'ID invalide",
+          details: idError instanceof Error ? idError.message : String(idError)
+        });
+        return;
+      }
+
+      // Vérification de l'existence de la liste
+      const list = await ListModel.findById(listObjectId);
+      if (!list) {
+        res.status(404).json({ 
+          error: "Liste non trouvée",
+          details: { listId: id }
+        });
+        return;
+      }
+
+      // Vérification si le participant est dans la liste
+      const participantIndex = list.participants.findIndex(
+        existingParticipantId => existingParticipantId.equals(participantObjectId)
+      );
+
+      if (participantIndex === -1) {
+        res.status(404).json({ 
+          error: "Participant non trouvé dans la liste",
+          details: { 
+            listId: id, 
+            participantId: participantId 
+          }
+        });
+        return;
+      }
+
+      // Suppression du participant de la liste
+      list.participants.splice(participantIndex, 1);
+      
+      // Sauvegarde de la liste mise à jour
+      const updatedList = await list.save();
+
+      // Récupération de la liste avec les détails des participants
+      const populatedList = await ListModel.findById(listObjectId).populate("participants");
+
+      res.status(200).json({
+        message: "Participant supprimé avec succès",
+        list: populatedList
+      });
+
+    } catch (error) {
+      console.error("[LIST CONTROLLER] Erreur lors de la suppression du participant:", error);
+      
+      res.status(500).json({ 
+        error: "Erreur interne lors de la suppression du participant",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
 };
 
 export default ListController;
